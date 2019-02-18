@@ -4,29 +4,31 @@
 
 > This script will establish a connection to a MySQL database, retrieve all tables and document them by creating `.csv`, `.md` and `.sql` files. If you're using [Marknotes](https://github.com/cavo789/marknotes), it'll also create the full documentation folder for Marknotes.
 
--   [Description](#description)
--   [Install](#install)
--   [Configuration](#configuration)
--   [Usage](#usage)
--   [Hint](#hint)
--   [Author](#author)
--   [License](#license)
+- [Description](#description)
+- [Install](#install)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Hints](#hints)
+  - [Marknotes](#marknotes)
+  - [Laravel](#laravel)
+- [Author](#author)
+- [License](#license)
 
 ## Description
 
 Table by table documentation will be generated:
 
--   a .csv file with the first xxx records of the table
--   a .sql file with a simple SELECT statement on that table
--   a \_connection.md file with the info needed for establishing a connection
-    on the database
--   a \_description.md file with the description of the table
--   a \_structure.md file with a markdown table and will display the structure of the table (fieldname, type and comments if any)
+- a .csv file with the first xxx records of the table
+- a .sql file with a simple SELECT statement on that table
+- a \_connection.md file with the info needed for establishing a connection
+  on the database
+- a \_description.md file with the description of the table
+- a \_structure.md file with a markdown table and will display the structure of the table (fieldname, type and comments if any)
 
 If create_marknotes setting is set to True, additional .md files will be created:
 
--   a .md file for the documentation of the database itself
--   one .md file by table.
+- a .md file for the documentation of the database itself
+- one .md file by table.
 
 These two additional files will use a template defined in the settings.json file, under
 marknotes->templates. Please refers to the marknotes documentation to learn more on that tool.
@@ -49,72 +51,72 @@ Below the content of the file:
 
 ````json
 {
-    "databases": [
-        {
-            "host": "localhost",
-            "name": "your-db-name",
-            "user": "root",
-            "password": "",
-            "prefix": "",
-            "type": "mysqli",
-            "output": {
-                "folder": "C:\\temp\\db-documentation",
-                "empty": 1
-            }
-        }
-    ],
-    "config": {
-        "create_csv": 1,
-        "create_marknotes": 1,
-        "create_md": 1,
-        "create_sql": 1,
-        "csv_separator": ";",
-        "get_credentials": 1,
-        "get_detail": 1,
-        "maxrows": 5,
-        "timeformat": "d/m/Y H:i:s",
-        "timezone": "Europe/Brussels"
-    },
-    "marknotes": {
-        "templates": {
-            "database": [
-                "# Database @@DB_NAME@@",
-                "",
-                "%TOC_6%",
-                "",
-                "## Connection information",
-                "",
-                "%INCLUDE tables/.files/@@DB_NAME@@_connection.md%",
-                "",
-                "## Summary of tables",
-                "",
-                "%CSV tables/.files/@@DB_NAME@@_tables.csv%",
-                "",
-                "## List of tables",
-                "",
-                "%INCLUDE tables/*.md%"
-            ],
-            "table": [
-                "# @@TABLE_NAME@@",
-                "",
-                "%INCLUDE .files/@@TABLE_NAME@@_description.md%",
-                "",
-                "## SQL",
-                "",
-                "```sql",
-                "%INCLUDE .files/@@TABLE_NAME@@.sql%",
-                "```",
-                "",
-                "## Fields",
-                "",
-                "%INCLUDE .files/@@TABLE_NAME@@_structure.md%",
-                "",
-                "## Samples",
-                "",
-                "%CSV .files/@@TABLE_NAME@@.csv%"
-            ]
-        }
+  "databases": [
+    {
+      "host": "localhost",
+      "name": "your-db-name",
+      "user": "root",
+      "password": "",
+      "prefix": "",
+      "type": "mysqli",
+      "output": {
+        "folder": "C:\\temp\\db-documentation",
+        "empty": 1
+      }
     }
+  ],
+  "config": {
+    "create_csv": 1,
+    "create_marknotes": 1,
+    "create_md": 1,
+    "create_sql": 1,
+    "csv_separator": ";",
+    "get_credentials": 1,
+    "get_detail": 1,
+    "maxrows": 5,
+    "timeformat": "d/m/Y H:i:s",
+    "timezone": "Europe/Brussels"
+  },
+  "marknotes": {
+    "templates": {
+      "database": [
+        "# Database @@DB_NAME@@",
+        "",
+        "%TOC_6%",
+        "",
+        "## Connection information",
+        "",
+        "%INCLUDE tables/.files/@@DB_NAME@@_connection.md%",
+        "",
+        "## Summary of tables",
+        "",
+        "%CSV tables/.files/@@DB_NAME@@_tables.csv%",
+        "",
+        "## List of tables",
+        "",
+        "%INCLUDE tables/*.md%"
+      ],
+      "table": [
+        "# @@TABLE_NAME@@",
+        "",
+        "%INCLUDE .files/@@TABLE_NAME@@_description.md%",
+        "",
+        "## SQL",
+        "",
+        "```sql",
+        "%INCLUDE .files/@@TABLE_NAME@@.sql%",
+        "```",
+        "",
+        "## Fields",
+        "",
+        "%INCLUDE .files/@@TABLE_NAME@@_structure.md%",
+        "",
+        "## Samples",
+        "",
+        "%CSV .files/@@TABLE_NAME@@.csv%"
+      ]
+    }
+  }
 }
 ````
 
@@ -144,30 +146,30 @@ _(simplified example)_
 
 A database should contain at least the following information:
 
--   `host`: the name of the database server (`localhost` the most of time);
--   `name`: name of the database. That name will appear in the interface;
--   `user`: the name of the user to use to get access to the database (`root` the most of time on a local webserver);
--   `password`: password for that user;
--   `prefix`: if your tables have a prefix, please specify the prefix here;
--   `type`: the database type (`mysqli` the most of time);
+- `host`: the name of the database server (`localhost` the most of time);
+- `name`: name of the database. That name will appear in the interface;
+- `user`: the name of the user to use to get access to the database (`root` the most of time on a local webserver);
+- `password`: password for that user;
+- `prefix`: if your tables have a prefix, please specify the prefix here;
+- `type`: the database type (`mysqli` the most of time);
 
 Then you'll have an `output` entry with two items:
 
--   `folder`: the fullname to the folder where to store files generated by the script;
--   `empty`: 1 to first empty that folder before starting to generate new files.
+- `folder`: the fullname to the folder where to store files generated by the script;
+- `empty`: 1 to first empty that folder before starting to generate new files.
 
 ```json
 {
-    "host": "localhost",
-    "name": "your-db-name",
-    "user": "root",
-    "password": "",
-    "prefix": "",
-    "type": "mysqli",
-    "output": {
-        "folder": "C:\\temp\\db-documentation",
-        "empty": 1
-    }
+  "host": "localhost",
+  "name": "your-db-name",
+  "user": "root",
+  "password": "",
+  "prefix": "",
+  "type": "mysqli",
+  "output": {
+    "folder": "C:\\temp\\db-documentation",
+    "empty": 1
+  }
 }
 ```
 
@@ -175,16 +177,16 @@ Then you'll have an `output` entry with two items:
 
 Configuration options:
 
--   `create_csv`: 0 or 1 - Does this script should generate .csv files?;
--   `create_marknotes`: 0 or 1 - Does this script should generate files for marknotes?;
--   `create_md`: 0 or 1 - Does this script should generate .md files?;
--   `create_sql`: 0 or 1 - Does this script should generate .sql files?;
--   `csv_separator`: Define the separator to use for CSV files, Default is ";";
--   `get_credentials`: 0 or 1 - Does the documentation should include the credentials of the database?;
--   `get_detail`: 0 or 1 - Does the documentation should include one documentation by table?;
--   `maxrows`: Number of rows to show in the table samples;
--   `timeformat`: Format for displaying date/time, Default; if not specified, will be Y-m-d h:i:s a;
--   `timezone`: Needed to correctly display date/time, Default will be retrieved from the server's default.
+- `create_csv`: 0 or 1 - Does this script should generate .csv files?;
+- `create_marknotes`: 0 or 1 - Does this script should generate files for marknotes?;
+- `create_md`: 0 or 1 - Does this script should generate .md files?;
+- `create_sql`: 0 or 1 - Does this script should generate .sql files?;
+- `csv_separator`: Define the separator to use for CSV files, Default is ";";
+- `get_credentials`: 0 or 1 - Does the documentation should include the credentials of the database?;
+- `get_detail`: 0 or 1 - Does the documentation should include one documentation by table?;
+- `maxrows`: Number of rows to show in the table samples;
+- `timeformat`: Format for displaying date/time, Default; if not specified, will be Y-m-d h:i:s a;
+- `timezone`: Needed to correctly display date/time, Default will be retrieved from the server's default.
 
 ```json
 "config": {
@@ -207,8 +209,8 @@ When the `create_marknotes` option is set to `1` in the `config` node, generated
 
 Marknotes documentation will be:
 
--   One markdown file (`.md` extension) with the documentation of the database and
--   One markdown file for each table in the database.
+- One markdown file (`.md` extension) with the documentation of the database and
+- One markdown file for each table in the database.
 
 Both these files will be created by using a template. The `marknotes` node in the `settings.json` file deserves that purpose.
 
@@ -265,13 +267,40 @@ As soon as a database name is selected, the program will start and after a few s
 
 You can define one `output` folder by databases.
 
-## Hint
+## Hints
+
+### Marknotes
 
 By using [Marknotes](https://github.com/cavo789/marknotes), documentation has never be so simple: just install Marknotes (see [Marknotes_Install](https://github.com/cavo789/marknotes_install)) and once done, specify the location of the `doc` folder of your current Marknotes installation in the `output` folder of your `settings.json` file.
 
 By refreshing the documentation, files will be immediately store in your Marknotes installation and immediately available for your documentation.
 
 Marknotes has a lot of plugins and can easily convert documentation to Word documents (`.docx`) or Markdown files (`.md`).
+
+### Laravel
+
+If you're working with Laravel, it's easy to add comments to tables and fields by using a migration script.
+
+When you create your own table in Laravel, as you know, you get a `.php` file in the `/database/migrations` folder. This is the file where you specify your fields.
+
+Take a look on the `up` function here below to learn how to add comments for fields and for the table:
+
+```php
+public function up()
+{
+    Schema::create('test', function (Blueprint $table) {
+        $table->string('id', 100)->primary();
+        $table->integer('user_id');
+        $table->boolean('enabled')->comment = 'When set to false, the record should be considered as deleted (soft delete)';
+    });
+
+    DB::statement("ALTER TABLE `test` comment 'This table is used for ... and also for ...'");
+}
+```
+
+Laravel expose a `comment` attribute for fields but no for the table. That's why we recommend to use a `DB::statement` command for running a DDL `ALTER TABLE`.
+
+Both table and field's comment will be retrieved by this `DB_Documentor` tool.
 
 ## Author
 
