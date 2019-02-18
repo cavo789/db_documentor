@@ -1,0 +1,68 @@
+{
+    "databases": [
+        {
+            "host": "localhost",
+            "name": "your-db-name",
+            "user": "root",
+            "password": "",
+            "prefix": "",
+            "type": "mysqli",
+            "output": {
+                "folder": "C:\\temp\\db-documentation",
+                "empty": 1
+            }
+        }
+    ],
+    "config": {
+        "create_csv": 1,
+        "create_marknotes": 1,
+        "create_md": 1,
+        "create_sql": 1,
+        "csv_separator": ";",
+        "get_credentials": 1,
+        "get_detail": 1,
+        "maxrows": 5,
+        "timeformat": "d/m/Y H:i:s",
+        "timezone": "Europe/Brussels"
+    },
+    "marknotes": {
+        "templates": {
+            "database": [
+                "# Database @@DB_NAME@@",
+                "",
+                "%TOC_6%",
+                "",
+                "## Connection information",
+                "",
+                "%INCLUDE tables/.files/@@DB_NAME@@_connection.md%",
+                "",
+                "## Summary of tables",
+                "",
+                "%CSV tables/.files/@@DB_NAME@@_tables.csv%",
+                "",
+                "## List of tables",
+                "",
+                "%INCLUDE tables/*.md%"
+            ],
+            "table": [
+                "# @@TABLE_NAME@@",
+                "",
+                "%INCLUDE .files/@@TABLE_NAME@@_description.md%",
+                "",
+                "## SQL",
+                "",
+                "```sql",
+                "%INCLUDE .files/@@TABLE_NAME@@.sql%",
+                "```",
+                "",
+                "## Fields",
+                "",
+                "%INCLUDE .files/@@TABLE_NAME@@_structure.md%",
+                "",
+                "## Samples",
+                "",
+                "%CSV .files/@@TABLE_NAME@@.csv%"
+            ]
+        }
+    }
+}
