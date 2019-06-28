@@ -15,10 +15,11 @@
     }
   ],
   "config": {
-    "create_csv": 1,
-    "create_marknotes": 1,
+    "create_csv": 0,
+    "create_gitlab_wiki": 1,
+    "create_marknotes": 0,
     "create_md": 1,
-    "create_sql": 1,
+    "create_sql": 0,
     "csv_separator": ";",
     "get_credentials": 1,
     "get_detail": 1,

@@ -1,11 +1,12 @@
 <?php
-// Only valid if PHP7 or greater
-declare(strict_types = 1);
+
+declare (strict_types = 1);
 
 /**
  * Author: AVONTURE Christophe - https://www.avonture.be.
  *
  * Written date: 15 february 2019
+ * Last mod: 28 June 2019
  *
  * This script will establish a connection to a MySQL database
  * and retrieve all tables.
@@ -21,53 +22,31 @@ declare(strict_types = 1);
  *          and will display the structure of the table (fieldname, type
  *          and comments if any)
  *
- * If create_marknotes setting is set to True, additional .md files will be created:
+ * If createMarknotes setting is set to True, additional .md files will be created:
  *    - a .md file for the documentation of the database itself
  *    - one .md file by table.
  *
  * These two additional files will use a template defined in the settings.json file, under
  * marknotes->templates. Please refers to the marknotes documentation to learn more on that tool.
+ *
  * @see https://github.com/cavo789/marknotes
  */
 
-namespace AVONTURE;
-
-// Source of this script on github
-define('REPO', 'https://github.com/cavo789/db_documentor');
-
-// Name of the settings file
-define('SETTINGS', 'settings.json');
-
-// Enable or not the debug mode
-define('DEBUG', true);
-
-/**
- * A few helper function.
- */
-class Helper
-{
-    public static function initDebug(bool $onOff)
-    {
-        if (true === $onOff) {
-            ini_set('display_errors', '1');
-            ini_set('display_startup_errors', '1');
-            ini_set('html_errors', '1');
-            ini_set('docref_root', 'http://www.php.net/');
-            ini_set('error_prepend_string', "<div style='color:red; font-family:verdana; border:1px solid red; padding:5px;'>");
-            ini_set('error_append_string', '</div>');
-            error_reporting(E_ALL);
-        } else {
-            error_reporting(0);
-        }
-    }
-}
+namespace Classes;
 
 /**
  * The main class.
  */
-class dbDocumentor
+class DbDocument
 {
     private const DS = DIRECTORY_SEPARATOR;
+
+    /**
+     * Undocumented variable
+     *
+     * @var Classes\Csv2Md
+     */
+    private $csv2MdParser = null;
 
     /**
      * Database username to use to establish the connection.
@@ -153,14 +132,14 @@ class dbDocumentor
      *
      * @var bool
      */
-    private $create_csv = true;
+    private $createCsv = true;
 
     /**
      * Does this script should generate .md files?
      *
      * @var bool
      */
-    private $create_md = true;
+    private $createMd = true;
 
     /**
      * Does this script should generate _custom.md file for tables?
@@ -173,21 +152,28 @@ class dbDocumentor
      *
      * @var bool
      */
-    private $create_custom_md = false;
+    private $createCustomMd = false;
 
     /**
      * Does this script should generate files for marknotes?
      *
      * @var bool
      */
-    private $create_marknotes = false;
+    private $createMarknotes = false;
+
+    /**
+     * Does this script should generate files for gitlab wiki?
+     *
+     * @var bool
+     */
+    private $createGitLabWiki = false;
 
     /**
      * Does this script should generate .sql files?
      *
      * @var bool
      */
-    private $create_sql = true;
+    private $createSql = true;
 
     /**
      * Define the separator to use for CSV files.
@@ -197,12 +183,11 @@ class dbDocumentor
     private $csvSeparator = ',';
 
     /**
-     * Information's coming from the settings file for marknotes usage
-     * The array will contains a.o.t. templates to use.
+     * Templates to use.
      *
      * @var array
      */
-    private $marknotes = [];
+    private $templates = [];
 
     /**
      * Enable or not the debug mode.
@@ -242,9 +227,14 @@ class dbDocumentor
      *                      the script will display "Open URL" statement so it's easy
      *                      for the user to "jump" that that URL (probably the online
      *                      documentation tool)
+     *
+     * @param Classes\Csv2Md $csv
+     *       $csv is a parser that will convert a CSV string into a MD array
      */
-    public function __construct(array $db)
+    public function __construct(array $db, \Classes\Csv2Md $csv)
     {
+        $this->csv2MdParser = $csv;
+
         $this->hostName = trim($db['host']);
         $this->userName = trim($db['user']);
         $this->password = trim($db['password'] ?? '');
@@ -266,12 +256,6 @@ class dbDocumentor
                 $folder = str_replace('/', DIRECTORY_SEPARATOR, $folder);
                 self::setOutputFolder($folder);
             }
-
-            // Should we first remove all files in the output folder
-            /*$empty = boolval($db['output']['empty'] ?? true);
-            if ($empty) {
-                self::emptyOutputFolder();
-            }*/
         }
     }
 
@@ -344,7 +328,7 @@ class dbDocumentor
      */
     public function setCreateCSV(bool $onOff)
     {
-        $this->create_csv = $onOff;
+        $this->createCsv = $onOff;
     }
 
     /**
@@ -356,7 +340,7 @@ class dbDocumentor
      */
     public function setCreateMD(bool $onOff)
     {
-        $this->create_md = $onOff;
+        $this->createMd = $onOff;
     }
 
     /**
@@ -374,7 +358,7 @@ class dbDocumentor
      */
     public function setCreateCustomMD(bool $onOff)
     {
-        $this->create_custom_md = $onOff;
+        $this->createCustomMd = $onOff;
     }
 
     /**
@@ -388,7 +372,19 @@ class dbDocumentor
      */
     public function setCreateMarknotes(bool $onOff)
     {
-        $this->create_marknotes = $onOff;
+        $this->createMarknotes = $onOff;
+    }
+
+    /**
+     * Does this script should generate files for gitlab wiki?
+     *
+     * @param bool $onOff
+     *
+     * @return void
+     */
+    public function setCreateGitLabWiki(bool $onOff)
+    {
+        $this->createGitLabWiki = $onOff;
     }
 
     /**
@@ -400,7 +396,7 @@ class dbDocumentor
      */
     public function setCreateSQL(bool $onOff)
     {
-        $this->create_sql = $onOff;
+        $this->createSql = $onOff;
     }
 
     /**
@@ -417,16 +413,28 @@ class dbDocumentor
     }
 
     /**
-     * Information's coming from the settings file for marknotes usage
+     * Set templates.
+     *
+     * @param array $data
+     *
+     * @return void
+     */
+    public function setTemplates(array $data)
+    {
+        $this->templates = $data;
+    }
+
+    /**
+     * Information's coming from the settings file for GitLab wiki usage
      * The array will contains a.o.t. templates to use.
      *
      * @param array $data
      *
      * @return void
      */
-    public function setMarknotes(array $data)
+    public function setGitLabWiki(array $data)
     {
-        $this->marknotes = $data;
+        $this->gitLabWiki = $data;
     }
 
     /**
@@ -475,7 +483,7 @@ class dbDocumentor
      */
     public function getHTMLCredentials(): string
     {
-        if ($this->create_marknotes) {
+        if ($this->createMarknotes) {
             // Create the dbname_connection.md file that will be used in the
             // marknotes's database template
             $content =
@@ -511,6 +519,9 @@ class dbDocumentor
         $sSQL = 'SELECT * FROM INFORMATION_SCHEMA.TABLES ' .
             "WHERE TABLE_SCHEMA LIKE '" . self::dbName() . "' ORDER BY TABLE_NAME;";
 
+        $sTocTables = '';
+        $i          = 0;
+
         if ($rows = $this->mysqli->query($sSQL)) {
             $sReturn = '<pre><code class="language-sql">' . $sSQL . '</code></pre>';
 
@@ -526,6 +537,14 @@ class dbDocumentor
                 PHP_EOL;
 
             while ($row = $rows->fetch_array()) {
+                if ($this->createGitLabWiki) {
+                    // Get the list of tables as an ordered list
+                    // This for the table of contents ("List of tables")
+                    ++$i;
+                    $sTocTables .= $i . '. [' . $row['TABLE_NAME'] . ']' .
+                        '(./tables/' . $row['TABLE_NAME'] . ')' . PHP_EOL;
+                }
+
                 $sReturn .= '<tr>' .
                     '<td>' . $row['TABLE_NAME'] . '</td>' .
                     '<td>' . $row['TABLE_ROWS'] . '</td>' .
@@ -546,21 +565,28 @@ class dbDocumentor
             $sReturn .= '</tbody></table>';
 
             // Generate a xxx_tables.csv file with the list of tables
-            if ($this->create_csv) {
+            if ($this->createCsv) {
                 self::makeFile(self::dbName() . '_tables.csv', $sCSV, 'tables/.files');
             }
 
-            if ($this->create_marknotes) {
-                self::makeFile(self::dbName() . '.md', self::template('database'));
+            if (($this->createGitLabWiki) || ($this->createMarknotes)) {
+                $sTocTables .= PHP_EOL;
+
+                self::makeFile(
+                    self::dbName() . '.md',
+                    self::template(
+                        'database',
+                        ['tables_list'=> $sTocTables]
+                    )
+                );
             }
 
-            if ($this->create_md && $this->create_custom_md) {
+            if ($this->createMd && $this->createCustomMd) {
                 // The dbName()_custom.md file will allow the documentation maintainer
                 // to add extra information's to the database's documentation.
                 // Such files won't be overwritten if already there.
                 self::makeFile(self::dbName() . '_custom.md', '', 'tables/.files', true);
             }
-
         }
 
         return $sReturn;
@@ -581,14 +607,14 @@ class dbDocumentor
             foreach ($this->arrTables as $key => $table) {
                 $tableName        = $table[0];
                 $tableDescription = $table[1];
-                $tableDescription = str_replace('|', '<br/>', $tableDescription);
+                $tableDescription = str_replace('|', PHP_EOL, $tableDescription);
 
-                // Generate a _description.md file with a simple SELECT command
-                if ($this->create_md) {
+                // Generate a _description.md file with the table description
+                if (($this->createMarknotes) && ($this->createMd)) {
                     self::makeFile($tableName . '_description.md', $tableDescription, 'tables/.files');
                 }
 
-                if ($this->create_md && $this->create_custom_md) {
+                if ($this->createMarknotes && $this->createCustomMd) {
                     // The xxx_custom.md file will allow the documentation maintainer
                     // to add extra information's to the table's documentation.
                     // Such files won't be overwritten if already there.
@@ -598,11 +624,11 @@ class dbDocumentor
                 $sSQL = 'SELECT * FROM `' . self::dbName() . '`.`' . $tableName . '`;';
 
                 // Generate a .sql file with a simple SELECT command
-                if ($this->create_sql) {
+                if (($this->createMarknotes) && ($this->createSql)) {
                     self::makeFile($tableName . '.sql', $sSQL, 'tables/.files');
                 }
 
-                if ($this->create_marknotes) {
+                if ($this->createMarknotes) {
                     $arr               =[];
                     $arr['table_name'] = $tableName;
                     self::makeFile($tableName . '.md', self::template('table', $arr), 'tables');
@@ -614,12 +640,37 @@ class dbDocumentor
                 $sReturn .= '<pre><code class="language-sql">' . $sSQL . '</code></pre>';
 
                 $sReturn .= '<h4>Samples</h4>';
-                $sReturn .= self::getFirstRows($tableName);
+                $sSampleRows = self::getFirstRows($tableName);
+                $sReturn .= $sSampleRows;
 
                 $sReturn .= '<h4>Table structure</h4>';
-                $sReturn .= self::getTableStructure($tableName);
+                $tableStructure = self::getTableStructure($tableName);
+                $sReturn .= $tableStructure . '<hr/>';
 
-                $sReturn .= '<hr/>';
+                $sReturn .= '<h4>Table relations</h4>';
+                $sRelations = self::getTableRelations($tableName);
+                $sReturn .= $sRelations . '<hr/>';
+
+                if ($this->createGitLabWiki) {
+                    $arr                      =[];
+                    $arr['table_name']        = $tableName;
+                    $arr['table_description'] = $tableDescription;
+                    $arr['table_structure']   = trim($tableStructure, ' \n');
+
+                    if ('' !== $sSampleRows) {
+                        // Create a new CSV parser
+                        $this->csv2MdParser->setCSV($sSampleRows);
+                        $this->csv2MdParser->setDelimiter(';');
+
+                        $sSampleRows = $this->csv2MdParser->getMarkup();
+                    }
+
+                    $arr['sample_rows'] = $sSampleRows;
+
+                    $arr['relations']   = $sRelations;
+
+                    self::makeFile($tableName . '.md', self::template('table', $arr), 'tables');
+                }
             }
         }
 
@@ -650,28 +701,13 @@ class dbDocumentor
     }
 
     /**
-     * Remove all files present in the output folder.
-     *
-     * @return void
-     */
-    /*private function emptyOutputFolder()
-    {
-        if (is_dir($this->outputFolder)) {
-            if (is_writable($this->outputFolder)) {
-                // Get the list of any files then unlink them
-                array_map('unlink', glob($this->outputFolder . '*.*'));
-            }
-        }
-    }*/
-
-    /**
      * Create a file on disk; in the output folder.
      *
      * @param string $filename      Basename of the file (no path)
      * @param string $content       The file's content
      * @param string $subfolder     Sub-folder where to put the file
-     * @param bool   $onlyIfMissing Create the file only if not yet present. 
-     *                                  Do nothing if the file already exists
+     * @param bool   $onlyIfMissing Create the file only if not yet present.
+     *                              Do nothing if the file already exists
      *
      * @return void
      */
@@ -682,10 +718,11 @@ class dbDocumentor
         bool   $onlyIfMissing = false
     ) {
         // Get the output folder
-        $path = self::outputFolder();
+        $path = rtrim(self::outputFolder(), self::DS) . self::DS;
 
-        // The file to create will be used by marknotes so create it in the specified sub-folder
-        if ($this->create_marknotes) {
+        // The file to create will be used by marknotes so create
+        // it in the specified sub-folder
+        if (($this->createMarknotes) || ($this->createGitLabWiki)) {
             $path .= $subfolder . self::DS;
             if (!is_dir($path)) {
                 mkdir($path, 0755, true);
@@ -755,7 +792,7 @@ class dbDocumentor
             }
 
             // Generate a .md file with the structure of the table
-            if ($this->create_md) {
+            if (($this->createMarknotes) && ($this->createMd)) {
                 $sReturn = '*Last update: ' . date($this->timeformat, time()) . '*' .
                     PHP_EOL . PHP_EOL . $sReturn;
 
@@ -763,7 +800,63 @@ class dbDocumentor
             }
         }
 
-        $sReturn = '<pre>' . $sReturn . '</pre>';
+        if (!$this->createGitLabWiki) {
+            $sReturn = '<pre>' . $sReturn . '</pre>';
+        }
+
+        return trim($sReturn, ' \n');
+    }
+
+    /**
+     * Get the list of relations between tables (thanks to foreign keys).
+     *
+     * Note: running this SQL is slow...
+     *
+     * @param string $tableName
+     *
+     * @return string
+     */
+    private function getTableRelations(string $tableName): string
+    {
+        $sSQL =
+            'select fks.table_name as fk_tableName, ' .
+            'group_concat(kcu.column_name order by ' .
+                "position_in_unique_constraint separator ', ') as fk_columns, " .
+            "'->' as rel, " .
+            'fks.referenced_table_name as pk_tableName,  ' .
+            'kcu.referenced_column_name as pk_column ' .
+            'from information_schema.referential_constraints fks  ' .
+            'join information_schema.key_column_usage kcu  ' .
+            'on fks.constraint_schema = kcu.table_schema and  ' .
+            'fks.table_name = kcu.table_name and  ' .
+            'fks.constraint_name = kcu.constraint_name  ' .
+            "where fks.constraint_schema = '" . self::dbName() . "' " .
+            "and fks.table_name = '" . $tableName . "' " .
+            'group by fks.constraint_schema, fks.table_name,  ' .
+                'fks.unique_constraint_schema, fks.referenced_table_name,  ' .
+            'fks.constraint_name , kcu.referenced_column_name ' .
+            'order by fk_tableName, fk_columns;';
+
+        $sReturn = '';
+
+        if ($rows = $this->mysqli->query($sSQL)) {
+            $sReturn = '| TableName | Column | Relation | Primary table | Primary colum | ' . PHP_EOL .
+                '| --- | --- | --- | --- | --- | ' . PHP_EOL;
+
+            foreach ($rows as $col) {
+                $sReturn .= '| ' .
+                    $col['fk_tableName'] . ' | ' .
+                    $col['fk_columns'] . ' | ' .
+                    $col['rel'] . ' | ' .
+                    $col['pk_tableName'] . ' | ' .
+                    $col['pk_column'] . ' |' .
+                     PHP_EOL;
+            }
+        }
+
+        if (!$this->createGitLabWiki) {
+            $sReturn = '<pre>' . $sReturn . '</pre>';
+        }
 
         return $sReturn;
     }
@@ -779,7 +872,7 @@ class dbDocumentor
     private function makeCSV(\mysqli_result $rows, string $filename): string
     {
         // Should we create a .csv file on disk or not?
-        if (!$this->create_csv) {
+        if (!$this->createCsv) {
             $filename = 'php://memory';
         }
 
@@ -801,7 +894,7 @@ class dbDocumentor
 
         // Get the first rows of the file
         // Use "+1" because the first line is the row with column's heading
-        if ($this->create_csv) {
+        if ($this->createCsv) {
             $firstRows = implode('', array_slice(file($filename), 0, $this->maxrows + 1));
         } else {
             // Special case since the file wasn't created on disk but on memory
@@ -820,7 +913,7 @@ class dbDocumentor
 
     /**
      * Get the first xxx rows of the table and display them on screen
-     * If the $this->create_csv constant is set to true, output a .csv
+     * If the $this->createCsv constant is set to true, output a .csv
      * file into the OUTPUT folder.
      *
      * @param string $tblName
@@ -836,13 +929,17 @@ class dbDocumentor
         if ($rows = $this->mysqli->query($sSQL)) {
             // Generate a CSV file and get his content so we can display it
 
-            $path = $this->outputFolder . ($this->create_marknotes ? 'tables/.files' . self::DS : '');
+            $path = $this->outputFolder . ($this->createMarknotes ? 'tables/.files' . self::DS : '');
             $CSV  = self::makeCSV($rows, $path . $tableName . '.csv');
 
-            if ('' === $CSV) {
-                $sReturn .= '<div>The table is empty.</div>';
+            if (!$this->createMd) {
+                if ('' === $CSV) {
+                    $sReturn .= '<div>The table is empty.</div>';
+                } else {
+                    $sReturn .= '<pre>' . $CSV . '</pre>';
+                }
             } else {
-                $sReturn .= '<pre>' . $CSV . '</pre>';
+                $sReturn .= $CSV;
             }
         }
 
@@ -956,7 +1053,7 @@ class dbDocumentor
     }
 
     /**
-     * Get a template from the marknotes data.
+     * Get a template.
      *
      * @param string $sName     Name of the template to return
      * @param array  $variables Array with extra name like TABLE_NAME and their values
@@ -965,10 +1062,10 @@ class dbDocumentor
      */
     private function template(string $sName, array $variables = []): string
     {
-        $tmp = '';
+        $tmpl = '';
 
-        if (isset($this->marknotes['templates'])) {
-            $tmpl = $this->marknotes['templates'][$sName] ?? '';
+        if (isset($this->templates[$sName])) {
+            $tmpl = $this->templates[$sName] ?? '';
 
             if (is_array($tmpl)) {
                 $tmpl = implode(PHP_EOL, $tmpl);
@@ -976,6 +1073,9 @@ class dbDocumentor
 
             if ('' !== $tmpl) {
                 $tmpl = str_replace('@@DB_NAME@@', self::dbName(), $tmpl);
+
+                $tmpl = str_replace('@@LASTUPDATE@@', 'Last update: ' .
+                    date($this->timeformat, time()), $tmpl);
 
                 if (count($variables) > 0) {
                     foreach ($variables as $name => $value) {
@@ -988,398 +1088,3 @@ class dbDocumentor
         return $tmpl;
     }
 }
-
-/**
- * Read the settings.json file.
- * If something goes wrong with the file, exit the script and show an error message.
- *
- * @return array
- */
-function readSettings(): array
-{
-    $arr = [];
-
-    if (file_exists(SETTINGS)) {
-        $json = file_get_contents(SETTINGS);
-        if ('' == trim($json)) {
-            die('Sorry, the ' . SETTINGS . ' file is empty, please read the documentation at ' . REPO);
-        }
-
-        $arr = json_decode($json, true);
-    } else {
-       // die('Sorry, the ' . SETTINGS . ' file is missing, please read the documentation at ' . REPO);
-    }
-
-    return $arr;
-}
-
-/**
- * A database name has been selected; retrieve informations and generate doc.
- *
- * @param string $dbName
- *
- * @return array
- */
-function doIt(string $dbName): array
-{
-    // Just in case
-    if ('' == $dbName) {
-        return
-            [
-                'status'  => '0',
-                'message' => 'Error, no database name provided; something ' .
-                    'goes wrong with the ajax call',
-            ];
-    }
-
-    $dbName = base64_decode($dbName);
-
-    $arr = readSettings();
-
-    foreach ($arr['databases'] as $db) {
-        if ($db['name'] == $dbName) {
-            break;
-        }
-    }
-
-    // In case of: the search dbname isn't found in the settings file. Should not occurs
-    // except if the file has been updated after that the form has been displayed.
-    if ($db['name'] !== $dbName) {
-        return
-            [
-                'status'  => '0',
-                'message' => 'Error, no database called ' . $dbName . ' has been ' .
-                    'retrieved in your ' . SETTINGS . 'file',
-            ];
-    }
-
-    // Ok, we've retrieved our database from the settings file
-
-    $arrReturn = [];
-
-    // 1 for success
-    $arrReturn['status'] = 1;
-
-    // Instantiate and initialize our class
-    $dbDoc = new \AVONTURE\dbDocumentor($db);
-
-    $dbDoc->setDebug(DEBUG);
-
-    // Get the configuration coming from the setting file
-    $dbDoc->setTimeZone($arr['config']['timezone'] ?? 'Europe/Brussels');
-    $dbDoc->setTimeFormat($arr['config']['timeformat'] ?? 'd/m/Y H:i:s');
-    $dbDoc->setMaxRows(intval($arr['config']['maxrows'] ?? 5));
-    $dbDoc->setCreateCSV(boolval($arr['config']['create_csv'] ?? true));
-    $dbDoc->setCreateMD(boolval($arr['config']['create_md'] ?? true));
-    $dbDoc->setCreateCustomMD(boolval($db['output']['create_custom'] ?? true));
-    $dbDoc->setCreateMarknotes(boolval($arr['config']['create_marknotes'] ?? false));
-    $dbDoc->setCreateSQL(boolval($arr['config']['create_sql'] ?? true));
-    $dbDoc->setCSVSeparator($arr['config']['csv_separator'] ?? ',');
-
-    // Get marknotes configuration coming from the setting file
-    // Useful only when config.create_marknotes is equal to true in the config
-    // node
-    $dbDoc->setMarknotes($arr['marknotes'] ?? []);
-
-    // For easiness, return a HTML string
-    if (boolval($arr['config']['get_credentials'] ?? true)) {
-        $arrReturn['credentials'] = $dbDoc->getHTMLCredentials();
-    }
-
-    if (!$dbDoc->init()) {
-        $arrReturn['status']  = 0; // Error
-        $arrReturn['message'] = 'Fatal error with the database connection, ' .
-            'invalid credentials, please review your ' . SETTINGS . ' file';
-    }
-
-    // For easiness, return a HTML string
-    $arrReturn['tables'] = $dbDoc->getListOfTables();
-
-    if (boolval($arr['config']['get_detail'] ?? true)) {
-        $arrReturn['detail'] = $dbDoc->getTablesDetail();
-    }
-
-    if (
-        boolval($arr['config']['create_csv'] ?? true) ||
-        boolval($arr['config']['create_md'] ?? true)
-    ) {
-        $arrReturn['conclusion'] = 'Files have been created in folder ' . $db['output']['folder'] . '.';
-
-        $url = trim(strval($db['output']['url']) ?? '');
-        if ('' !== $url) {
-            $link = '<a href="'. $db['output']['url'] . '" target="_blank">' .
-                'See documentation online</a>';
-            $arrReturn['conclusion'] .= ' ' . $link;
-        }
-    } else {
-        $arrReturn['conclusion'] = 'The database has been successfully processed';
-    }
-
-    // No more needed, release the object
-    unset($dbDoc);
-
-    return $arrReturn;
-}
-
-// ENTRY POINT
-Helper::initDebug(DEBUG);
-
-// Get the data sent by Ajax.
-$data   = json_decode(file_get_contents('php://input'), true);
-$task   = trim(filter_var(($data['task'] ?? ''), FILTER_SANITIZE_STRING));
-$dbName = trim(filter_var(($data['dbName'] ?? ''), FILTER_SANITIZE_STRING));
-
-if ('doIt' === $task) {
-    $result = doIt($dbName);
-
-    // Do the job. doIt() will return an array
-    die(json_encode($result));
-} else {
-    // Read the settings.json file and initialize the list of databases
-    $arr = readSettings();
-
-    // Get the list of databases
-    $sDBNames = '';
-
-    // Sort databases
-    if (isset($arr['databases'])) {
-        sort($arr['databases']);
-
-        // $sDBNames will be used for our <select>...</select> for allowing the user to
-        // select a database
-        foreach ($arr['databases'] as $db) {
-            $sDBNames .= '<option value="' . $db['name'] . '">' . $db['name'] . '</option>';
-        }
-    }
-}
-
-// Get the GitHub corner
-$github = '';
-if (is_file($cat = __DIR__ . DIRECTORY_SEPARATOR . 'octocat.tmpl')) {
-    $github = str_replace('%REPO%', REPO, file_get_contents($cat));
-}
-
-?>
-
-<!DOCTYPE html>
-<html lang="en">
-
-    <head>
-        <meta charset="utf-8"/>
-        <meta name="author" content="Christophe Avonture" />
-        <meta name="robots" content="noindex, nofollow" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
-        <meta http-equiv="X-UA-Compatible" content="IE=9; IE=8;" />
-        <title>Database documentation tool</title>
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.4/css/bulma.min.css" rel="stylesheet" media="screen" />
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/themes/prism.min.css" rel="stylesheet" media="screen" />
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.25.3/css/theme.ice.min.css" rel="stylesheet" media="screen" />
-   </head>
-
-   <body>
-
-        <?php echo $github; ?>
-
-        <section class="section">
-            <div class="container">
-                <h1 class="title is-3">Database documentor</h1>
-                <p class="subtitle">Document each table of your database; create .csv and multiple .md files so you can easily retrieve these information's for your favorites documentation tool.</p>
-
-                <small class="content has-text-info">
-                    The configuration is coming from the
-                    <?php echo __DIR__ . DIRECTORY_SEPARATOR . SETTINGS; ?> file;
-                    if the file isn't there, please copy `settings.json.dist` and name the new file
-                    <?php echo __DIR__ . DIRECTORY_SEPARATOR . SETTINGS; ?> needed please edit it and adapt the program to your needs. Read documentation
-                    on <a href="<?php echo REPO; ?>">GitHub</a> to learn how to do.
-                </small>
-
-                <hr/>
-
-                <div id="app">
-
-                    <div class="field is-horizontal">
-                        <div class="field-label is-normal">
-                            <label class="label" for="select_dbname">Please select your database:</label>
-                        </div>
-                        <div class="field-body">
-                            <div class="field">
-                                <p class="control">
-                                    <span class="select">
-                                        <select  @change="selectDbName" class="select" v-model="name" id="select_dbname" ><?php echo $sDBNames; ?></select>
-                                    </span>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <h2 class="title is-4" v-if="name">{{ name }}</h2>
-
-                    <errors v-if="errors.length" :errors="errors"></errors>
-
-                    <credentials v-if="credentials" :html="credentials"></credentials>
-
-                    <tables v-if="tables" :html="tables"></tables>
-
-                    <detail v-if="detail" :html="detail"></detail>
-
-                    <conclusion :html="conclusion"></conclusion>
-
-                </div>
-            </div>
-        </section>
-
-        <script src="https://unpkg.com/vue"></script>
-        <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-
-        <!-- jQuery need for tablesorter plugin; used in the "List of tables" part -->
-        <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.25.3/js/jquery.tablesorter.combined.min.js"></script>
-
-        <!-- Prism - Highlight SQL statements -->
-        <script type="text/javascript" data-manual src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/prism.min.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/components/prism-sql.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/components/prism-plsql.min.js"></script>
-
-        <script>
-            Vue.component("errors", {
-                template:
-                    `<div class="content has-text-danger">
-                        <b>Please correct the following error(s):</b>
-                        <ul>
-                            <li v-for="error in errors">{{ error }}</li>
-                        </ul>
-                    </div>`,
-                props: {
-                    errors: {
-                        type: Array
-                    }
-                }
-            });
-
-            Vue.component("credentials", {
-                template:
-                    `<div class="content">
-                        <details>
-                            <summary>Connection information</summary>
-                            <div v-html="html" />
-                        </details>
-                    </div>`,
-                props: {
-                    html: {
-                        type: String
-                    }
-                }
-            });
-
-            Vue.component("tables", {
-                template:
-                    `<div class="content">
-                        <details>
-                            <summary>Summary of tables</summary>
-                            <div v-html="html" />
-                        </details>
-                    </div>`,
-                props: {
-                    html: {
-                        type: String
-                    }
-                },
-                mounted() {
-                    // Make the table sortable thanks to the tableSorter plugin
-                    $("#tbl").tablesorter({
-                    theme: "ice",
-                    widthFixed: false,
-                    sortMultiSortKey: "shiftKey",
-                    sortResetKey: "ctrlKey",
-                    headers: {
-                    0: {sorter: "text"}, // Table name
-                    1: {sorter: "digit"} // Number of records
-                    },
-                    ignoreCase: true,
-                    headerTemplate: "{content} {icon}",
-                    widgets: ["uitheme", "filter"],
-                    initWidgets: true,
-                    widgetOptions: {
-                    uitheme: "ice"
-                    },
-                    sortList: [[0]]  // Sort by default on the table name
-                });
-                }
-            });
-
-            Vue.component("detail", {
-                template:
-                    `<div class="content">
-                        <details>
-                            <summary>List of tables</summary>
-                            <div v-html="html" />
-                        </details>
-                    </div>`,
-                props: {
-                    html: {
-                        type: String
-                    }
-                }
-            });
-
-            Vue.component("conclusion", {
-                template:
-                    `<div class="content has-text-success"><div v-html="html" /></div>`,
-                props: {
-                    html: {
-                        type: String
-                    }
-                }
-            });
-
-            var app = new Vue({
-                el: '#app',
-                data: {
-                    conclusion: '',
-                    credentials: '',
-                    detail: '',
-                    name: '',
-                    errors: [],
-                    status: 0,
-                    tables: ''
-                },
-                methods: {
-                    selectDbName() {
-                        this.errors = [];
-                        this.conclusion = '';
-                        this.credentials = '';
-                        this.detail = '';
-                        this.tables = '';
-
-                        var $data = {
-                            task: 'doIt',
-                            dbName: window.btoa(this.name)
-                        }
-
-                        axios.post('<?php echo basename(__FILE__); ?>', $data)
-                        .then(response => {
-                            if (response.data.status==0) {
-                                // status = 0 means errors
-                                this.errors.push(response.data.message);
-                            }
-
-                            this.credentials = response.data.credentials;
-                            this.tables = response.data.tables;
-                            this.detail = response.data.detail;
-                            this.conclusion = response.data.conclusion;
-                        })
-                        .catch(function (error) {console.log(error);})
-                        .then(function() {
-                            if (typeof Prism === 'object') {
-                                // Use prism.js and highlight source code
-                                Prism.highlightAll();
-                            }
-                        });
-                    }
-                }
-            });
-        </script>
-
-   </body>
-</html>
