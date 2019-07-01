@@ -2,8 +2,6 @@
 
 declare(strict_types = 1);
 
-namespace Avonture;
-
 /**
  * AUTHOR : AVONTURE Christophe
  *
@@ -23,9 +21,12 @@ namespace Avonture;
  *
  * Last mod:
  * 2019-01-01 - Abandonment of jQuery and migration to vue.js
- * 
+ *
  * @phan-suppress PhanUnreferencedClass
  */
+
+namespace Classes;
+
 class Csv2Md
 {
     /**
@@ -95,7 +96,7 @@ class Csv2Md
      * @param string $csv
      *
      * @return void
-     * 
+     *
      * @phan-suppress PhanUnreferencedPublicMethod
      */
     public function setCsv(string $csv)
@@ -109,7 +110,7 @@ class Csv2Md
      * @param string $delim
      *
      * @return void
-     * 
+     *
      * @phan-suppress PhanUnreferencedPublicMethod
      */
     public function setDelimiter(string $delim)
@@ -123,7 +124,7 @@ class Csv2Md
      * @param bool $transpose
      *
      * @return void
-     * 
+     *
      * @phan-suppress PhanUnreferencedPublicMethod
      */
     public function setTranspose(bool $transpose)
@@ -137,7 +138,7 @@ class Csv2Md
      * @param string $enclosure
      *
      * @return void
-     * 
+     *
      * @phan-suppress PhanUnreferencedPublicMethod
      */
     public function setEnclosure(string $enclosure)
@@ -151,7 +152,7 @@ class Csv2Md
      * @param string $tableSeparator
      *
      * @return void
-     * 
+     *
      * @phan-suppress PhanUnreferencedPublicMethod
      */
     public function setTableSeparator(string $tableSeparator)
@@ -160,10 +161,10 @@ class Csv2Md
     }
 
     /**
-     * Convert CSV to MD 
+     * Convert CSV to MD
      *
      * @return string The markdown result
-     * 
+     *
      * @phan-suppress PhanUnreferencedPublicMethod
      */
     public function getMarkup(): string
@@ -335,7 +336,7 @@ class Csv2Md
 
     /**
      * Add the row just below the header; with | --- | --- |
-     * 
+     *
      * @return string
      */
     private function createSeparator(): string

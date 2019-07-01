@@ -6,9 +6,9 @@ namespace Avonture;
 
 require_once 'vendor/autoload.php';
 
-use Classes\Csv2Md as Csv2Md;
-use Classes\DbDocument as DbDocument;
-use Classes\Helper as Helper;
+use \Classes\Csv2Md;
+use \Classes\DbDocument;
+use \Classes\Helper;
 
 // Source of this script on github
 define('REPO', 'https://github.com/cavo789/db_documentor');
@@ -248,6 +248,8 @@ if (is_file($cat = __DIR__ . DIRECTORY_SEPARATOR . 'octocat.tmpl')) {
 
                     <errors v-if="errors.length" :errors="errors"></errors>
 
+                    <loading v-if="name" :loading="loading"></loading>
+
                     <credentials v-if="credentials" :html="credentials"></credentials>
 
                     <tables v-if="tables" :html="tables"></tables>
@@ -273,6 +275,18 @@ if (is_file($cat = __DIR__ . DIRECTORY_SEPARATOR . 'octocat.tmpl')) {
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/components/prism-plsql.min.js"></script>
 
         <script>
+            Vue.component("loading", {
+                template:
+                    `<div v-if="loading" class="content has-text-info">
+                        <b>Loading... Please wait... Documenting a database is a slow process</b>
+                    </div>`,
+                props: {
+                    loading: {
+                        type: Boolean
+                    }
+                }
+            });
+
             Vue.component("errors", {
                 template:
                     `<div class="content has-text-danger">
@@ -373,7 +387,8 @@ if (is_file($cat = __DIR__ . DIRECTORY_SEPARATOR . 'octocat.tmpl')) {
                     name: '',
                     errors: [],
                     status: 0,
-                    tables: ''
+                    tables: '',
+                    loading: false
                 },
                 methods: {
                     selectDbName() {
@@ -382,6 +397,7 @@ if (is_file($cat = __DIR__ . DIRECTORY_SEPARATOR . 'octocat.tmpl')) {
                         this.credentials = '';
                         this.detail = '';
                         this.tables = '';
+                        this.loading = true;
 
                         var $data = {
                             task: 'doIt',
@@ -394,6 +410,8 @@ if (is_file($cat = __DIR__ . DIRECTORY_SEPARATOR . 'octocat.tmpl')) {
                                 // status = 0 means errors
                                 this.errors.push(response.data.message);
                             }
+
+                            this.loading = false;
 
                             this.credentials = response.data.credentials;
                             this.tables = response.data.tables;
