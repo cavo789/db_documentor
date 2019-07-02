@@ -1,6 +1,6 @@
 <?php
 
-declare (strict_types = 1);
+declare(strict_types = 1);
 
 /**
  * Author: AVONTURE Christophe - https://www.avonture.be.
@@ -40,13 +40,6 @@ namespace Classes;
 class DbDocument
 {
     private const DS = DIRECTORY_SEPARATOR;
-
-    /**
-     * Undocumented variable
-     *
-     * @var Classes\Csv2Md
-     */
-    private $csv2MdParser = null;
 
     /**
      * Database username to use to establish the connection.
@@ -89,6 +82,13 @@ class DbDocument
      * @var string
      */
     protected $dbPrefix = '';
+
+    /**
+     * Undocumented variable.
+     *
+     * @var Classes\Csv2Md
+     */
+    private $csv2MdParser = null;
 
     /**
      * Object to the database.
@@ -227,9 +227,8 @@ class DbDocument
      *                      the script will display "Open URL" statement so it's easy
      *                      for the user to "jump" that that URL (probably the online
      *                      documentation tool)
-     *
      * @param Classes\Csv2Md $csv
-     *       $csv is a parser that will convert a CSV string into a MD array
+     *                            $csv is a parser that will convert a CSV string into a MD array
      */
     public function __construct(array $db, \Classes\Csv2Md $csv)
     {
@@ -808,7 +807,8 @@ class DbDocument
     }
 
     /**
-     * Get the list of relations between tables (thanks to foreign keys).
+     * Get the list of relations between tables (by using foreign
+     * keys constraints).
      *
      * Note: running this SQL is slow...
      *
@@ -819,9 +819,9 @@ class DbDocument
     private function getTableRelations(string $tableName): string
     {
         $sSQL =
-            'select fks.table_name as fk_tableName, ' .
+        'select fks.table_name as fk_tableName, ' .
             'group_concat(kcu.column_name order by ' .
-                "position_in_unique_constraint separator ', ') as fk_columns, " .
+            "position_in_unique_constraint separator ', ') as fk_columns, " .
             "'->' as rel, " .
             'fks.referenced_table_name as pk_tableName,  ' .
             'kcu.referenced_column_name as pk_column ' .
@@ -831,17 +831,19 @@ class DbDocument
             'fks.table_name = kcu.table_name and  ' .
             'fks.constraint_name = kcu.constraint_name  ' .
             "where fks.constraint_schema = '" . self::dbName() . "' " .
-            "and fks.table_name = '" . $tableName . "' " .
+            // fks.table_name = our table is linked to ...
+            // fks.referenced_table_name = a third table is linked to our table
+            "and (fks.table_name = '" . $tableName . "' or fks.referenced_table_name = '" . $tableName . "') " .
             'group by fks.constraint_schema, fks.table_name,  ' .
                 'fks.unique_constraint_schema, fks.referenced_table_name,  ' .
-            'fks.constraint_name , kcu.referenced_column_name ' .
+                'fks.constraint_name , kcu.referenced_column_name ' .
             'order by fk_tableName, fk_columns;';
 
         $sReturn = '';
 
         if ($rows = $this->mysqli->query($sSQL)) {
             $sReturn = '| TableName | Column | Relation | Primary table | Primary colum | ' . PHP_EOL .
-                '| --- | --- | --- | --- | --- | ' . PHP_EOL;
+            '| --- | --- | --- | --- | --- | ' . PHP_EOL;
 
             foreach ($rows as $col) {
                 $sReturn .= '| ' .
@@ -850,7 +852,7 @@ class DbDocument
                     $col['rel'] . ' | ' .
                     $col['pk_tableName'] . ' | ' .
                     $col['pk_column'] . ' |' .
-                     PHP_EOL;
+                    PHP_EOL;
             }
         }
 
