@@ -1,6 +1,6 @@
-![Banner](images/banner.png)
-
 # DB Documentor
+
+![Banner](imag.es/banner.svg)
 
 > This script will establish a connection to a MySQL database, retrieve all tables and document them by creating `.csv`, `.md` and `.sql` files. If you're using [Marknotes](https://github.com/cavo789/marknotes), it'll also create the full documentation folder for Marknotes.
 
